@@ -488,8 +488,10 @@ export default function AdminDashboard() {
             <span>
               Displaying <strong className="text-slate-800">{filteredReports.length}</strong> of {complaints.length} work orders
             </span>
-            <span className="font-mono text-[11px] text-emerald-700 hidden sm:inline">
-              • MongoDB Auto-sync: ACTIVE
+            <span className={`font-mono text-[11px] hidden sm:inline ${
+              backendConnected ? 'text-emerald-700' : 'text-amber-700'
+            }`}>
+              • {backendConnected ? 'MongoDB Cloud: CONNECTED' : 'Demo Mode: ACTIVE (Sample Data)'}
             </span>
           </div>
 
@@ -829,13 +831,43 @@ export default function AdminDashboard() {
               {filteredReports.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
-                    No complaints match the specified filter criteria.
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <p className="text-slate-600 font-medium text-sm">
+                        {complaints.length === 0
+                          ? 'No grievances loaded currently.'
+                          : 'No complaints match the specified filter criteria.'}
+                      </p>
+                      {complaints.length === 0 ? (
+                        <button
+                          type="button"
+                          onClick={resetToSampleData}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          Load 6 Sample Demo Complaints
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery('');
+                            setStatusFilter('All');
+                            setPriorityFilter('All');
+                            setSeverityFilter('All');
+                            setZoneFilter('All Zones');
+                          }}
+                          className="mt-1 text-xs text-emerald-600 hover:text-emerald-700 underline font-semibold"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredReports.map((item) => (
                   <tr
-                    key={item.id}
+                    key={item.complaintId || item.id || item._id}
                     className="hover:bg-slate-50/80 transition-colors group"
                   >
                     {/* ID & thumbnail */}

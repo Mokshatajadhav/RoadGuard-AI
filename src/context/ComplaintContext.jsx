@@ -6,8 +6,19 @@ const ComplaintContext = createContext(null);
 const STORAGE_KEY = 'roadguard_complaints_v1';
 
 export function ComplaintProvider({ children }) {
-  const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [complaints, setComplaints] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return INITIAL_COMPLAINTS;
+  });
+  const [loading, setLoading] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
   const [error, setError] = useState(null);
   const [notification, setNotification] = useState(null);
@@ -81,8 +92,11 @@ export function ComplaintProvider({ children }) {
       setBackendConnected(true);
 
       const res = await apiService.getComplaints({ limit: 50 });
-      if (res?.data) {
+      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
         setComplaints(res.data);
+      } else {
+        // If MongoDB collection is currently empty, preserve demo grievances
+        setComplaints((prev) => (Array.isArray(prev) && prev.length > 0 ? prev : INITIAL_COMPLAINTS));
       }
     } catch (err) {
       console.warn('[ComplaintContext] Backend API unreachable, falling back to local demo data:', err.message);
@@ -93,13 +107,14 @@ export function ComplaintProvider({ children }) {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-          setComplaints(JSON.parse(saved));
-        } else {
-          setComplaints(INITIAL_COMPLAINTS);
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setComplaints(parsed);
+            return;
+          }
         }
-      } catch (e) {
-        setComplaints(INITIAL_COMPLAINTS);
-      }
+      } catch (e) {}
+      setComplaints(INITIAL_COMPLAINTS);
     } finally {
       setLoading(false);
     }
@@ -445,30 +460,55 @@ export function ComplaintProvider({ children }) {
 
   // Reset to initial mock data
   const resetToSampleData = async () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_COMPLAINTS));
+    } catch (e) {}
     setComplaints(INITIAL_COMPLAINTS);
-    localStorage.removeItem(STORAGE_KEY);
-    showToast('Reset to original sample data', 'info');
-    fetchComplaints();
+    setServerStats(null);
+    showToast('Reset to original sample data (6 grievances restored)', 'info');
   };
 
-  // Derived statistics: uses real server analytics if available, or derives from complaints array
-  const stats = serverStats || {
-    total: complaints.length,
-    pending: complaints.filter((c) => c.status === 'submitted' || c.status === 'Pending Verification').length,
-    inProgress: complaints.filter(
-      (c) => c.status === 'in_progress' || c.status === 'In Progress' || c.status === 'assigned' || c.status === 'Crew Assigned'
-    ).length,
-    resolved: complaints.filter((c) => c.status === 'resolved' || c.status === 'Resolved').length,
-    critical: complaints.filter((c) => c.priority === 'Critical' || c.priorityLabel === 'critical' || c.severity === 'high').length,
-    resolutionRate:
-      complaints.length > 0
-        ? Math.round(
-            (complaints.filter((c) => c.status === 'resolved' || c.status === 'Resolved').length /
-              complaints.length) *
-              100
-          )
-        : 0,
-  };
+  // Derived statistics: uses real server analytics if available and non-empty, or derives from complaints array
+  const stats = (serverStats && typeof serverStats.total === 'number' && serverStats.total > 0)
+    ? serverStats
+    : {
+        total: complaints.length,
+        pending: complaints.filter(
+          (c) =>
+            c.status === 'submitted' ||
+            c.status === 'Pending Verification' ||
+            c.status === 'pending' ||
+            c.status === 'verified'
+        ).length,
+        inProgress: complaints.filter(
+          (c) =>
+            c.status === 'in_progress' ||
+            c.status === 'In Progress' ||
+            c.status === 'assigned' ||
+            c.status === 'Crew Assigned' ||
+            c.status === 'repair_completed'
+        ).length,
+        resolved: complaints.filter(
+          (c) => c.status === 'resolved' || c.status === 'Resolved'
+        ).length,
+        critical: complaints.filter(
+          (c) =>
+            c.priority === 'Critical' ||
+            c.priorityLabel === 'critical' ||
+            c.severity === 'high' ||
+            c.severity === 'Severe'
+        ).length,
+        resolutionRate:
+          complaints.length > 0
+            ? Math.round(
+                (complaints.filter(
+                  (c) => c.status === 'resolved' || c.status === 'Resolved'
+                ).length /
+                  complaints.length) *
+                  100
+              )
+            : 0,
+      };
 
   return (
     <ComplaintContext.Provider

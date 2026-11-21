@@ -272,6 +272,46 @@ export default function Header() {
                 : 'Register your municipal citizen profile to report road damage and endorse civic complaints.'}
             </p>
 
+            {authMode === 'login' && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                  1-Click Demo Profiles:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthEmail('citizen@smartcity.gov.in');
+                      setAuthPassword('citizen123');
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 text-slate-700 font-semibold text-[11px] transition-colors shadow-2xs"
+                  >
+                    Citizen Demo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthEmail('admin@roadguard.gov.in');
+                      setAuthPassword('admin123');
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 text-slate-700 font-semibold text-[11px] transition-colors shadow-2xs"
+                  >
+                    Admin Desk
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthEmail('crew@pwd.gov.in');
+                      setAuthPassword('crew123');
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 text-slate-700 font-semibold text-[11px] transition-colors shadow-2xs"
+                  >
+                    PWD Crew
+                  </button>
+                </div>
+              </div>
+            )}
+
             {authMode === 'register' && (
               <div className="space-y-1">
                 <label className="block font-bold text-slate-700">Full Name</label>
